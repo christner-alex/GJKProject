@@ -2,24 +2,67 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+[RequireComponent(typeof(ISupport))]
 public class GJKCollider : MonoBehaviour {
-    
-    public List<Vector3> verticies;
+
+    private bool colliding = false;
+
+    private ISupport support;
 
 	// Use this for initialization
-	void Start () {
-		
+	void Start ()
+    {
+        support = GetComponent<ISupport>();
 	}
 	
 	// Update is called once per frame
-	void Update () {
-		
+	void Update ()
+    {
+        GJKCollider[] colliders = FindObjectsOfType<GJKCollider>();
+
+        //print(colliders.Length);
+
+        colliding = false;
+        foreach (GJKCollider c in colliders)
+        {
+            if(c == this)
+            {
+                continue;
+            }
+
+            if(CollidesWithOther(c))
+            {
+                colliding = true;
+                print("colliding");
+            }
+            else
+            {
+                print("not colliding");
+            }
+            print("blah");
+        }
 	}
 
-    bool CollidesWithOther(GameObject other)
+    public bool Colliding
+    {
+        get
+        {
+            return colliding;
+        }
+    }
+
+    public ISupport Support
+    {
+        get
+        {
+            return support;
+        }
+    }
+
+    bool CollidesWithOther(GJKCollider other)
     {
         //star point in a arbitrary direction
-        Vector3 start_point = MinkowskiSupport(other, -transform.position);
+        Vector3 start_point = MinkowskiDiffSupport(other, -transform.position);
 
         //add that point to the simplex
         List<Vector3> simplex = new List<Vector3>
@@ -32,7 +75,7 @@ public class GJKCollider : MonoBehaviour {
 
         while (true)
         {
-            Vector3 newest_point = MinkowskiSupport(other, direction);
+            Vector3 newest_point = MinkowskiDiffSupport(other, direction);
 
             if (Vector3.Dot(newest_point, direction) < 0)
             {
@@ -146,7 +189,6 @@ public class GJKCollider : MonoBehaviour {
 
         //the point is within the trianlge either above or below
 
-
         if(Vector3.Dot(ABC, AO) > 0)
         {
             simplex = new List<Vector3>
@@ -228,7 +270,7 @@ public class GJKCollider : MonoBehaviour {
                 ABC = ADB;
 
                 goto check_one_face;
-
+                
             case over_abc | over_acd:
                 goto check_two_faces;
 
@@ -332,22 +374,13 @@ public class GJKCollider : MonoBehaviour {
         goto check_one_face_part_2;
     }
 
-    Vector3 MinkowskiSupport(GameObject other, Vector3 direction)
+    Vector3 MinkowskiDiffSupport(GJKCollider other, Vector3 direction)
     {
-        return other.GetComponent<GJKCollider>().Support(direction) - Support(direction);
+        return other.support.Support(direction) - support.Support(-direction);
     }
 
     Vector3 Cross_ABA( Vector3 A, Vector3 B )
     {
         return Vector3.Cross( Vector3.Cross(A, B), A );
-    }
-
-    Vector3 Support(Vector3 direction)
-    {
-        List<Vector3> world_vertices = new List<Vector3>();
-        foreach(Vector3 vert in verticies)
-        {
-            world_vertices.Add(transform.position + vert);
-        }
     }
 }
