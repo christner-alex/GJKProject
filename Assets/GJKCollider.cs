@@ -9,6 +9,8 @@ public class GJKCollider : MonoBehaviour {
 
     private ISupport support;
 
+    private int MAX_ITERATIONS = 256;
+
 	// Use this for initialization
 	void Start ()
     {
@@ -39,7 +41,6 @@ public class GJKCollider : MonoBehaviour {
             {
                 print("not colliding");
             }
-            print("blah");
         }
 	}
 
@@ -61,8 +62,9 @@ public class GJKCollider : MonoBehaviour {
 
     bool CollidesWithOther(GJKCollider other)
     {
+        /*
         //star point in a arbitrary direction
-        Vector3 start_point = MinkowskiDiffSupport(other, -transform.position);
+        Vector3 start_point = MinkowskiDiffSupport(other, Vector3.right);
 
         //add that point to the simplex
         List<Vector3> simplex = new List<Vector3>
@@ -72,8 +74,29 @@ public class GJKCollider : MonoBehaviour {
 
         //search in the direction of that point to the origin
         Vector3 direction = -start_point;
+        */
 
-        while (true)
+        Vector3 direction = Vector3.right;
+        Vector3 C = MinkowskiDiffSupport(other, direction);
+        if(Vector3.Dot(C, direction) < 0)
+        {
+            return false;
+        }
+
+        direction = -C;
+        Vector3 B = MinkowskiDiffSupport(other, direction);
+        if (Vector3.Dot(B, direction) < 0)
+        {
+            return false;
+        }
+
+        direction = Cross_ABA(C - B, -B);
+        List<Vector3> simplex = new List<Vector3>
+        {
+            B, C
+        };
+
+        for (int i = 0; i < MAX_ITERATIONS; i++)
         {
             Vector3 newest_point = MinkowskiDiffSupport(other, direction);
 
@@ -87,6 +110,10 @@ public class GJKCollider : MonoBehaviour {
                 return true;
             }
         }
+
+        print("finished iters");
+
+        return false;
     }
 
     bool DoSimplex(Vector3 newest_point, ref List<Vector3> simplex, ref Vector3 direction)
@@ -116,9 +143,12 @@ public class GJKCollider : MonoBehaviour {
 
         Vector3 AB = B - A;
         Vector3 AO = -A;
-        
+
+        /*
         if (Vector3.Dot(AB, AO) > 0)
         {
+            //origin in region between A and B
+
             simplex = new List<Vector3>
             {
                 A, B
@@ -128,6 +158,8 @@ public class GJKCollider : MonoBehaviour {
         }
         else
         {
+            //origin in region beyond A
+
             simplex = new List<Vector3>
             {
                 A
@@ -135,6 +167,14 @@ public class GJKCollider : MonoBehaviour {
 
             direction = AO;
         }
+        */
+
+        simplex = new List<Vector3>
+        {
+            A, B
+        };
+
+        direction = Cross_ABA(AB, AO);
 
         return false;
     }
@@ -165,13 +205,13 @@ public class GJKCollider : MonoBehaviour {
             };
 
             //search in the direction perpenducilar to 
-            direction = Vector3.Cross(AB, AO);
+            direction = Cross_ABA(AB, AO);
 
             return false;
         }
 
         //vector in trianlge's plane perpendicular to AC
-        Vector3 ACP = Vector3.Cross(AC, ABC);
+        Vector3 ACP = Vector3.Cross(ABC, AC);
         //if the origin lies outside the trianlge edge AB
         if (Vector3.Dot(ACP, AO) > 0)
         {
@@ -182,7 +222,7 @@ public class GJKCollider : MonoBehaviour {
             };
 
             //search in the direction perpenducilar to 
-            direction = Vector3.Cross(AC, AO);
+            direction = Cross_ABA(AC, AO);
 
             return false;
         }
@@ -261,7 +301,7 @@ public class GJKCollider : MonoBehaviour {
 
             case over_adb:
                 //rotate ADB into ABC
-                C = D;
+                C = B;
                 B = D;
 
                 AC = AB;
@@ -376,10 +416,10 @@ public class GJKCollider : MonoBehaviour {
 
     Vector3 MinkowskiDiffSupport(GJKCollider other, Vector3 direction)
     {
-        return other.support.Support(direction) - support.Support(-direction);
+        return support.Support(direction) - other.support.Support(-direction);
     }
 
-    Vector3 Cross_ABA( Vector3 A, Vector3 B )
+    Vector3 Cross_ABA(Vector3 A, Vector3 B)
     {
         return Vector3.Cross( Vector3.Cross(A, B), A );
     }
