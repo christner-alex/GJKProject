@@ -11,18 +11,20 @@ public class GJKCollider : MonoBehaviour {
 
     private int MAX_ITERATIONS = 256;
 
+    Dictionary<GJKCollider, Vector3> closest_points;
+
 	// Use this for initialization
 	void Start ()
     {
         support = GetComponent<ISupport>();
-	}
+
+        closest_points = new Dictionary<GJKCollider, Vector3>();
+    }
 	
 	// Update is called once per frame
 	void Update ()
     {
         GJKCollider[] colliders = FindObjectsOfType<GJKCollider>();
-
-        //print(colliders.Length);
 
         colliding = false;
         foreach (GJKCollider c in colliders)
@@ -32,15 +34,18 @@ public class GJKCollider : MonoBehaviour {
                 continue;
             }
 
-            if(CollidesWithOther(c))
+            if (!closest_points.ContainsKey(c))
+            {
+                closest_points.Add(c, c.gameObject.transform.position);
+            }
+
+            Vector3 closest_point;
+            if (CollidesWithOther(c, out closest_point))
             {
                 colliding = true;
-                print("colliding");
             }
-            else
-            {
-                print("not colliding");
-            }
+
+            closest_points[c] = closest_point;
         }
 	}
 
@@ -60,7 +65,18 @@ public class GJKCollider : MonoBehaviour {
         }
     }
 
-    bool CollidesWithOther(GJKCollider other)
+    public Vector3 ClosestPointTo(GJKCollider other)
+    {
+        if(!closest_points.ContainsKey(other))
+        {
+            print("this dictionay does not contain the key");
+            return this.gameObject.transform.position;
+        }
+
+        return closest_points[other];
+    }
+
+    bool CollidesWithOther(GJKCollider other, out Vector3 closest_point)
     {
         /*
         //star point in a arbitrary direction
@@ -75,16 +91,16 @@ public class GJKCollider : MonoBehaviour {
         //search in the direction of that point to the origin
         Vector3 direction = -start_point;
         */
-
+        
         Vector3 direction = Vector3.right;
-        Vector3 C = MinkowskiDiffSupport(other, direction);
+        Vector3 C = MinkowskiDiffSupport(other, direction, out closest_point);
         if(Vector3.Dot(C, direction) < 0)
         {
             return false;
         }
 
         direction = -C;
-        Vector3 B = MinkowskiDiffSupport(other, direction);
+        Vector3 B = MinkowskiDiffSupport(other, direction, out closest_point);
         if (Vector3.Dot(B, direction) < 0)
         {
             return false;
@@ -98,7 +114,7 @@ public class GJKCollider : MonoBehaviour {
 
         for (int i = 0; i < MAX_ITERATIONS; i++)
         {
-            Vector3 newest_point = MinkowskiDiffSupport(other, direction);
+            Vector3 newest_point = MinkowskiDiffSupport(other, direction, out closest_point);
 
             if (Vector3.Dot(newest_point, direction) < 0)
             {
@@ -112,9 +128,46 @@ public class GJKCollider : MonoBehaviour {
         }
 
         print("finished iters");
-
         return false;
     }
+
+    /*
+    Vector3 MinNormLine(List<Vector3> hull)
+    {
+        Vector3 A = hull[0];
+        Vector3 B = hull[1];
+
+        Vector3 AB = B - A;
+        Vector3 AO = -A;
+        Vector3 BO = -B;
+
+        //in inner region
+        if(Vector3.Dot(AO, AB) > 0 && Vector3.Dot(BO, AB) > 0)
+        {
+
+        }
+
+        //A is closer
+        if(AO.magnitude < BO.magnitude)
+        {
+            return A;
+        }
+        else //B is closer
+        {
+            return B;
+        }
+    }
+
+    Vector3 MinNormTri(Vector3 point, List<Vector3> hull)
+    {
+
+    }
+
+    Vector3 MinNormTetra(Vector3 point, List<Vector3> hull)
+    {
+
+    }
+    */
 
     bool DoSimplex(Vector3 newest_point, ref List<Vector3> simplex, ref Vector3 direction)
     {
@@ -414,9 +467,10 @@ public class GJKCollider : MonoBehaviour {
         goto check_one_face_part_2;
     }
 
-    Vector3 MinkowskiDiffSupport(GJKCollider other, Vector3 direction)
+    Vector3 MinkowskiDiffSupport(GJKCollider other, Vector3 direction, out Vector3 temp_closest)
     {
-        return support.Support(direction) - other.support.Support(-direction);
+        temp_closest = support.Support(direction);
+        return temp_closest - other.support.Support(-direction);
     }
 
     Vector3 Cross_ABA(Vector3 A, Vector3 B)

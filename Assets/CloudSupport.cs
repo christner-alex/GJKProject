@@ -17,19 +17,38 @@ public class CloudSupport : MonoBehaviour, ISupport {
             world_verts.Add(world_vert);
         }
 
-        Vector3 best_vert = world_verts[0];
+        List<Vector3> best_verts = new List<Vector3>();
         float best_dot = Mathf.NegativeInfinity;
 
         foreach(Vector3 vert in world_verts)
         {
             float dot = Vector3.Dot(vert, direction);
-            if(dot > best_dot)
+            if(dot == best_dot)
             {
-                best_vert = vert;
+                best_verts.Add(vert);
+            }
+            else if(dot > best_dot)
+            {
+                best_verts.Clear();
+                best_verts.Add(vert);
                 best_dot = dot;
             }
         }
 
-        return best_vert;
+        return best_verts[0];
+        /*
+        if(best_verts.Count == 1)
+        {
+            return best_verts[0];
+        }
+        else if(best_verts.Count == 2)
+        {
+
+        }
+        else if (best_verts.Count == 3)
+        {
+
+        }
+        */
     }
 }
