@@ -76,6 +76,40 @@ public class GJKCollider : MonoBehaviour {
         return closest_points[other];
     }
 
+    bool CollidesWithOther(GJKCollider other, out Vector3 closest_point, bool temp)
+    {
+        Vector3 min_norm = Vector3.zero;
+        bool result = false;
+
+        List<Vector3> convex_hull = new List<Vector3>();
+
+        for (int i = 0; i < MAX_ITERATIONS; i++)
+        {
+            min_norm = MinNorm(ref convex_hull);
+
+            if(min_norm == Vector3.zero)
+            {
+                result = true;
+                break;
+            }
+
+            Vector3 support_point = MinkowskiDiffSupport(other, -min_norm);
+
+            //if the min norm is just as extreme as the support point
+            //(ie, the vector from norm to support is perpendicular to the direction searched)
+            //then there was no collision
+            if (Vector3.Dot(support_point - min_norm, -min_norm) == 0)
+            {
+                break;
+            }
+
+            convex_hull.Add(support_point);
+        }
+        
+        closest_point = min_norm;
+        return result;
+    }
+
     bool CollidesWithOther(GJKCollider other, out Vector3 closest_point)
     {
         /*
@@ -131,43 +165,145 @@ public class GJKCollider : MonoBehaviour {
         return false;
     }
 
-    /*
-    Vector3 MinNormLine(List<Vector3> hull)
+    //returns the closest point within the convex hull defined by convex_hull
+    //and updates convex_hull to the smallest hull containing that point
+    Vector3 MinNorm(ref List<Vector3> convex_hull)
     {
-        Vector3 A = hull[0];
-        Vector3 B = hull[1];
+        if(convex_hull.Count == 1)
+        {
+            return convex_hull[0];
+        }
+        else if(convex_hull.Count == 2)
+        {
+            return MinNormLine(ref convex_hull);
+        }
+        else if (convex_hull.Count == 3)
+        {
+            return MinNormTri(ref convex_hull);
+        }
+        else if (convex_hull.Count == 4)
+        {
+            return MinNormTetra(ref convex_hull);
+        }
+        else
+        {
+
+        }
+    }
+
+    Vector3 MinNormLine(ref List<Vector3> convex_hull)
+    {
+        Vector3 A = convex_hull[0];
+        Vector3 B = convex_hull[1];
 
         Vector3 AB = B - A;
+        Vector3 BA = A - B;
+
         Vector3 AO = -A;
         Vector3 BO = -B;
 
         //in inner region
-        if(Vector3.Dot(AO, AB) > 0 && Vector3.Dot(BO, AB) > 0)
+        if(Vector3.Dot(AO, AB) > 0 && Vector3.Dot(BO, BA) > 0)
         {
 
         }
 
-        //A is closer
-        if(AO.magnitude < BO.magnitude)
+        if(AO.magnitude < BO.magnitude)//A is closer
         {
+            convex_hull = new List<Vector3>
+            {
+                A
+            };
+
             return A;
         }
         else //B is closer
         {
+            convex_hull = new List<Vector3>
+            {
+                B
+            };
+
             return B;
         }
     }
 
-    Vector3 MinNormTri(Vector3 point, List<Vector3> hull)
+    Vector3 MinNormTri(ref List<Vector3> convex_hull)
     {
+        Vector3 A = convex_hull[0];
+        Vector3 B = convex_hull[1];
+        Vector3 C = convex_hull[2];
 
+        Vector3 AO = -A;
+        Vector3 BO = -B;
+        Vector3 CO = -C;
+
+        Vector3 AB = B - A;
+        Vector3 BC = B - C;
+        Vector3 CA = C - A;
+
+        Vector3 ABC = Vector3.Cross(AB, -CA);
+
+        Vector3 ABP = Vector3.Cross(AB, ABC);
+        Vector3 ACP = Vector3.Cross(AC, ABC);
+        Vector3 BCP = Vector3.Cross(BC, ABC);
+
+        //inner region of triangle
+        if (Vector3.Dot(ABP, CO) < 0 && Vector3.Dot(ACP, BO) < 0 && Vector3.Dot(BCP, AO) < 0)
+        {
+            
+        }
+        
+        //check each line
+        if (Vector3.Dot(ACP, AO) > 0)
+        {
+            convex_hull = new List<Vector3>
+            {
+                A, B
+            };
+        }
+
+        if (Vector3.Dot(ACP, AO) > 0)
+        {
+            convex_hull = new List<Vector3>
+            {
+                A, C
+            };
+        }
+
+        if (Vector3.Dot(ACP, AO) > 0)
+        {
+            convex_hull = new List<Vector3>
+            {
+                B, C
+            };
+        }
+
+        return MinNormLine(ref convex_hull);
     }
 
-    Vector3 MinNormTetra(Vector3 point, List<Vector3> hull)
+    Vector3 MinNormTetra(ref List<Vector3> convex_hull)
     {
+        Vector3 A = convex_hull[0];
+        Vector3 B = convex_hull[1];
+        Vector3 C = convex_hull[2];
+        Vector3 D = convex_hull[3];
 
+        Vector3 AO = -A;
+        Vector3 BO = -B;
+        Vector3 CO = -C;
+        Vector3 DO = -D;
+
+        //check if the origin is inside the tetrahedron
+        if(false)
+        {
+
+
+            return Vector3.zero;
+        }
+
+        //check which face region the origin is within
     }
-    */
 
     bool DoSimplex(Vector3 newest_point, ref List<Vector3> simplex, ref Vector3 direction)
     {
@@ -471,6 +607,11 @@ public class GJKCollider : MonoBehaviour {
     {
         temp_closest = support.Support(direction);
         return temp_closest - other.support.Support(-direction);
+    }
+
+    Vector3 MinkowskiDiffSupport(GJKCollider other, Vector3 direction)
+    {
+        return support.Support(direction) - other.support.Support(-direction);
     }
 
     Vector3 Cross_ABA(Vector3 A, Vector3 B)
