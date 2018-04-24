@@ -205,7 +205,7 @@ public class GJKCollider : MonoBehaviour {
         //in inner region
         if(Vector3.Dot(AO, AB) > 0 && Vector3.Dot(BO, BA) > 0)
         {
-
+            return Vector3.Project(AO, AB);
         }
 
         if(AO.magnitude < BO.magnitude)//A is closer
@@ -251,7 +251,8 @@ public class GJKCollider : MonoBehaviour {
         //inner region of triangle
         if (Vector3.Dot(ABP, CO) < 0 && Vector3.Dot(ACP, BO) < 0 && Vector3.Dot(BCP, AO) < 0)
         {
-            
+            Vector3 p1 = Vector3.Project(AO, AB);
+            Vector3 p2 = Vector3.Project(BO, BC);
         }
         
         //check each line
