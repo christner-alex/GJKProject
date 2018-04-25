@@ -16,7 +16,7 @@ public class ClosestPointDrawer : MonoBehaviour {
 
         for(int i=0; i<colliders.Length; i++)
         {
-            for(int j=i+1; j<colliders.Length; j++)
+            for(int j= i + 1; j<colliders.Length; j++)
             {
                 GJKCollider c1 = colliders[i];
                 GJKCollider c2 = colliders[j];
