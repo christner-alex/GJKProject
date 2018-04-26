@@ -227,7 +227,7 @@ public class GJKCollider : MonoBehaviour {
                 A, B
             };
 
-            //search in the direction perpenducilar to 
+            //search in the direction perpenducilar to AB
             direction = Cross_ABA(AB, AO);
 
             return false;
@@ -244,7 +244,7 @@ public class GJKCollider : MonoBehaviour {
                 A, C
             };
 
-            //search in the direction perpenducilar to 
+            //search in the direction perpenducilar to AC
             direction = Cross_ABA(AC, AO);
 
             return false;
