@@ -21,8 +21,6 @@ GameObject:
   - component: {fileID: 4493327931445180}
   - component: {fileID: 33520213522804000}
   - component: {fileID: 23948731072911896}
-  - component: {fileID: 114546161951704210}
-  - component: {fileID: 114054405749149308}
   - component: {fileID: 114299097714298994}
   m_Layer: 0
   m_Name: GJKSphere
@@ -85,19 +83,6 @@ MeshFilter:
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 1562522068822514}
   m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
---- !u!114 &114054405749149308
-MonoBehaviour:
-  m_ObjectHideFlags: 1
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 100100000}
-  m_GameObject: {fileID: 1562522068822514}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1ca1bc0518624f44abf12c5cc9b70581, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  colliding_color: {r: 0.9485294, g: 0.6962937, b: 0.15343855, a: 0}
-  not_colliding_color: {r: 0.6838235, g: 0.6838235, b: 0.6838235, a: 0}
 --- !u!114 &114299097714298994
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -110,14 +95,3 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   radius: 0.5
---- !u!114 &114546161951704210
-MonoBehaviour:
-  m_ObjectHideFlags: 1
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 100100000}
-  m_GameObject: {fileID: 1562522068822514}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0d43fda83aa754e4580ea752ad6fcaf3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
