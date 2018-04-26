@@ -8,7 +8,7 @@ public class SphereSupport : MonoBehaviour, ISupport {
 
     public Vector3 Support(Vector3 direction)
     {
-        Vector3 center = transform.position;
+        Vector3 center = transform.position + transform.parent.position;
 
         return center + direction.normalized * radius;
     }

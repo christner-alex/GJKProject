@@ -16,10 +16,10 @@ public class CollisionUpdater : MonoBehaviour {
 	void Update () {
 
         GJKCollider[] colliders = FindObjectsOfType<GJKCollider>();
-
-        for (int i = 0; i < colliders.Length; i++)
+        bool[] colliding = new bool[colliders.Length];
+        for(int i = 0; i < colliding.Length; i++)
         {
-            colliders[i].gameObject.GetComponent<Renderer>().material.color = not_colliding_color;
+            colliding[i] = false;
         }
 
         for(int i = 0; i < colliders.Length; i++)
@@ -29,15 +29,53 @@ public class CollisionUpdater : MonoBehaviour {
                 Vector3 i_support;
                 Vector3 j_support;
                 bool collides = colliders[i].CollidesWithOther(colliders[j], out i_support, out j_support);
-
-                if(collides)
+                
+                if (collides)
                 {
-                    colliders[i].gameObject.GetComponent<Renderer>().material.color = colliding_color;
-                    colliders[j].gameObject.GetComponent<Renderer>().material.color = colliding_color;
+                    colliding[i] = true;
+                    colliding[j] = true;
                 }
 
                 Debug.DrawLine(i_support, j_support);
             }
         }
+
+        for (int i = 0; i < colliding.Length; i++)
+        {
+            Renderer[] rends = colliders[i].gameObject.GetComponentsInChildren<Renderer>();
+            foreach (Renderer r in rends)
+            {
+                if (colliding[i])
+                {
+                    r.material.color = colliding_color;
+
+                }
+                else
+                {
+                    r.material.color = not_colliding_color;
+                }
+            }
+        }
+
+        //int test;
+        //OutTest(out test);
+        //print(test);
     }
+    /*
+    void OutTest(out int test)
+    {
+        out1(out test);
+        out2(out test);
+    }
+
+    void out1(out int test)
+    {
+        test = 1;
+    }
+
+    void out2(out int test)
+    {
+        test = 2;
+    }
+    */
 }

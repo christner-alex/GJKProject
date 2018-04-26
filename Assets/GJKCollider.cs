@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-[RequireComponent(typeof(ISupport))]
 public class GJKCollider : MonoBehaviour {
 
-    private bool colliding = false;
+    //private bool colliding = false;
 
-    private ISupport support;
+    //private ISupport support;
+    private ISupport[] supports;
 
     private int MAX_ITERATIONS = 256;
 
@@ -16,7 +16,7 @@ public class GJKCollider : MonoBehaviour {
 	// Use this for initialization
 	void Start ()
     {
-        support = GetComponent<ISupport>();
+        supports = GetComponentsInChildren<ISupport>();
 
         closest_points = new Dictionary<GJKCollider, Vector3>();
     }
@@ -51,7 +51,7 @@ public class GJKCollider : MonoBehaviour {
         }
         */
 	}
-
+    /*
     public bool Colliding
     {
         get
@@ -59,14 +59,14 @@ public class GJKCollider : MonoBehaviour {
             return colliding;
         }
     }
-
+    */
     /*
     public Vector3 Support(Vector3 direction)
     {
         return support.Support(direction);
     }
     */
-
+    /*
     public Vector3 ClosestPointTo(GJKCollider other)
     {
         if(!closest_points.ContainsKey(other))
@@ -77,7 +77,7 @@ public class GJKCollider : MonoBehaviour {
 
         return closest_points[other];
     }
-
+    */
     public bool CollidesWithOther(GJKCollider other, out Vector3 my_support, out Vector3 other_support)
     {
         
@@ -439,15 +439,42 @@ public class GJKCollider : MonoBehaviour {
 
     Vector3 MinkowskiDiffSupport(GJKCollider other, Vector3 direction, out Vector3 my_support, out Vector3 other_support)
     {
-        my_support = support.Support(direction);
-        other_support = other.support.Support(-direction);
+        my_support = Support(direction);
+        other_support = other.Support(-direction);
         return my_support - other_support;
     }
 
-    Vector3 MinkowskiDiffSupport(GJKCollider other, Vector3 direction, out Vector3 temp_closest)
+    Vector3 Support(Vector3 direction)
     {
-        temp_closest = support.Support(direction);
-        return temp_closest - other.support.Support(-direction);
+        List<Vector3> best_support = new List<Vector3>();
+        float best_dot = Mathf.NegativeInfinity;
+
+        foreach (ISupport support in supports)
+        {
+            Vector3 point = support.Support(direction);
+
+            float dot = Vector3.Dot(point, direction);
+
+            if (dot == best_dot)
+            {
+                best_support.Add(point);
+            }
+            else if (dot > best_dot)
+            {
+                best_support.Clear();
+                best_support.Add(point);
+                best_dot = dot;
+            }
+        }
+
+        if(best_support.Count != 0)
+        {
+            return best_support[0];
+        }
+        else
+        {
+            return Vector3.zero;
+        }
     }
 
     Vector3 Cross_ABA(Vector3 A, Vector3 B)
@@ -634,9 +661,4 @@ public class GJKCollider : MonoBehaviour {
         //check which face region the origin is within
     }
     */
-
-    Vector3 MinkowskiDiffSupport(GJKCollider other, Vector3 direction)
-    {
-        return support.Support(direction) - other.support.Support(-direction);
-    }
 }

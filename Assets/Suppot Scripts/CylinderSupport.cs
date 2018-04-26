@@ -15,7 +15,7 @@ public class CylinderSupport : MonoBehaviour, ISupport
 
         float sign = Mathf.Sin(Vector3.Dot(transform.up, direction)) > 0 ? 1 : -1;
 
-        Vector3 temp = transform.position + sign * height / 2 * transform.up;
+        Vector3 temp = transform.position + transform.parent.position + sign * height / 2 * transform.up;
 
         if (w != Vector3.zero)
         {

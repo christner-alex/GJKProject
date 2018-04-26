@@ -21,6 +21,7 @@ public class CollidingColor : MonoBehaviour {
 	// Update is called once per frame
 	void Update () {
 		
+        /*
         if(gjk.Colliding)
         {
             rend.material.color = colliding_color;
@@ -29,5 +30,6 @@ public class CollidingColor : MonoBehaviour {
         {
             rend.material.color = not_colliding_color;
         }
+        */
 	}
 }

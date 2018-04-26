@@ -12,8 +12,8 @@ public class CloudSupport : MonoBehaviour, ISupport {
 
         foreach(Vector3 vert in vertices)
         {
-            Vector3 world_vert = transform.rotation * vert;
-            world_vert += transform.position;
+            Vector3 world_vert = transform.parent.rotation * transform.rotation * vert;
+            world_vert += transform.position + transform.parent.position;
             world_verts.Add(world_vert);
         }
 
@@ -35,20 +35,13 @@ public class CloudSupport : MonoBehaviour, ISupport {
             }
         }
 
-        return best_verts[0];
-        /*
-        if(best_verts.Count == 1)
+        if (best_verts.Count != 0)
         {
             return best_verts[0];
         }
-        else if(best_verts.Count == 2)
+        else
         {
-
+            return Vector3.zero;
         }
-        else if (best_verts.Count == 3)
-        {
-
-        }
-        */
     }
 }
