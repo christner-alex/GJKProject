@@ -21,10 +21,10 @@ public class ClosestPointDrawer : MonoBehaviour {
                 GJKCollider c1 = colliders[i];
                 GJKCollider c2 = colliders[j];
 
-                Vector3 p1 = c1.ClosestPointTo(c2);
-                Vector3 p2 = c2.ClosestPointTo(c1);
+                //Vector3 p1 = c1.ClosestPointTo(c2);
+                //Vector3 p2 = c2.ClosestPointTo(c1);
 
-                Debug.DrawLine(p1, p2);
+                //Debug.DrawLine(p1, p2);
             }
         }
 

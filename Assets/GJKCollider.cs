@@ -5,26 +5,26 @@ using UnityEngine;
 [RequireComponent(typeof(ISupport))]
 public class GJKCollider : MonoBehaviour {
 
-    private bool colliding = false;
+    //private bool colliding = false;
 
     private ISupport support;
 
     private int MAX_ITERATIONS = 256;
 
-    Dictionary<GJKCollider, Vector3> closest_points;
+    //Dictionary<GJKCollider, Vector3> closest_points;
 
 	// Use this for initialization
 	void Start ()
     {
         support = GetComponent<ISupport>();
 
-        closest_points = new Dictionary<GJKCollider, Vector3>();
+        //closest_points = new Dictionary<GJKCollider, Vector3>();
     }
 	
 	// Update is called once per frame
+    /*
 	void Update ()
     {
-        /*
         GJKCollider[] colliders = FindObjectsOfType<GJKCollider>();
 
         colliding = false;
@@ -49,9 +49,10 @@ public class GJKCollider : MonoBehaviour {
 
             closest_points[c] = my_support;
         }
-        */
 	}
+    */
 
+    /*
     public bool Colliding
     {
         get
@@ -59,6 +60,7 @@ public class GJKCollider : MonoBehaviour {
             return colliding;
         }
     }
+    */
 
     /*
     public Vector3 Support(Vector3 direction)
@@ -67,6 +69,7 @@ public class GJKCollider : MonoBehaviour {
     }
     */
 
+    /*
     public Vector3 ClosestPointTo(GJKCollider other)
     {
         if(!closest_points.ContainsKey(other))
@@ -77,23 +80,30 @@ public class GJKCollider : MonoBehaviour {
 
         return closest_points[other];
     }
+    */
 
-    public bool CollidesWithOther(GJKCollider other, out Vector3 my_support, out Vector3 other_support)
+    public bool CollidesWithOther(GJKCollider other, out Vector3 my_closest, out Vector3 other_closest)
     {
-        
+        bool result = false;
+        Vector3 newest_point;
+        Vector3 my_support;
+        Vector3 other_support;
+        Dictionary<Vector3, MinkowskiDiffPair> MinkowskiDiffPairs = new Dictionary<Vector3, MinkowskiDiffPair>();
+
         //start point in a arbitrary direction
-        Vector3 start_point = MinkowskiDiffSupport(other, Vector3.right, out my_support, out other_support);
+        newest_point = MinkowskiDiffSupport(other, Vector3.right, out my_support, out other_support);
+        MinkowskiDiffPairs.Add(newest_point, new MinkowskiDiffPair(my_support, other_support));
 
         //add that point to the simplex
         List<Vector3> simplex = new List<Vector3>
         {
-            start_point
+            newest_point
         };
 
         //search in the direction of that point to the origin
-        Vector3 direction = -start_point;
-        
-        
+        Vector3 direction = -newest_point;
+
+
         /*
         Vector3 direction = Vector3.right;
         Vector3 C = MinkowskiDiffSupport(other, direction, out my_support, out other_support);
@@ -120,23 +130,32 @@ public class GJKCollider : MonoBehaviour {
 
         for (int i = 0; i < MAX_ITERATIONS; i++)
         {
-            Vector3 newest_point = MinkowskiDiffSupport(other, direction, out my_support, out other_support);
+            newest_point = MinkowskiDiffSupport(other, direction, out my_support, out other_support);
+            MinkowskiDiffPairs.Add(newest_point, new MinkowskiDiffPair(my_support, other_support));
 
             if (Vector3.Dot(newest_point, direction) < 0)
             {
                 print("iteration " + i);
-                return false;
+                //return false;
+                break;
             }
 
             if(DoSimplex(newest_point, ref simplex, ref direction))
             {
                 print("iteration " + i);
-                return true;
+                result = true;
+                //return true;
+                break;
             }
+
         }
 
-        print("finished iters");
-        return false;
+        //print("finished iters");
+        //return false;
+
+        CalculateClosestPoints(simplex, MinkowskiDiffPairs, out my_closest, out other_closest);
+
+        return result;
     }
     
     bool DoSimplex(Vector3 newest_point, ref List<Vector3> simplex, ref Vector3 direction)
@@ -155,7 +174,7 @@ public class GJKCollider : MonoBehaviour {
         }
         else
         {
-            print("simplex error");
+            print("simplex error. Count="+simplex.Count);
             return false;
         }
     }
@@ -437,17 +456,116 @@ public class GJKCollider : MonoBehaviour {
         goto check_one_face_part_2;
     }
 
+    void CalculateClosestPoints(List<Vector3> simplex, Dictionary<Vector3, MinkowskiDiffPair> MDP, out Vector3 my_closest, out Vector3 other_closest)
+    {
+        if (simplex.Count == 1)//point is closest
+        {
+            my_closest = MDP[simplex[0]].MyPoint;
+            other_closest = MDP[simplex[0]].OtherPoint;
+        }
+        else if (simplex.Count == 2)//triangle
+        {
+            CalculateClosestPointsLine(simplex, MDP, out my_closest, out other_closest);
+        }
+        else if (simplex.Count == 3)//tetrahedron
+        {
+            CalculateClosestPointsTri(simplex, MDP, out my_closest, out other_closest);
+        }
+        else
+        {
+            print("closest point simplex error. Count=" + simplex.Count);
+
+            my_closest = Vector3.zero;
+            other_closest = Vector3.zero;
+        }
+    }
+    
+    void CalculateClosestPointsLine(List<Vector3> simplex, Dictionary<Vector3, MinkowskiDiffPair> MDP, out Vector3 my_closest, out Vector3 other_closest)
+    {
+        Vector3 A = simplex[0];
+        Vector3 B = simplex[1];
+
+        if(A == B)
+        {
+            my_closest = A;
+            other_closest = A;
+
+            return;
+        }
+
+        Vector3 L = B - A;
+
+        float lambda2 = Vector3.Dot(-L, A) / Vector3.Dot(L, L);
+        float lambda1 = 1 - lambda2;
+
+        Vector3 my_A = MDP[A].MyPoint;
+        Vector3 other_A = MDP[A].OtherPoint;
+        Vector3 my_B = MDP[B].MyPoint;
+        Vector3 other_B = MDP[B].OtherPoint;
+
+        my_closest = lambda1 * my_A + lambda2 * my_B;
+        other_closest = lambda1 * other_A + lambda2 * other_B;
+    }
+
+    void CalculateClosestPointsTri(List<Vector3> simplex, Dictionary<Vector3, MinkowskiDiffPair> MDP, out Vector3 my_closest, out Vector3 other_closest)
+    {
+
+        Vector3 A = simplex[0];
+        Vector3 B = simplex[1];
+        Vector3 C = simplex[2];
+
+        if(A == B && B == C)
+        {
+            my_closest = A;
+            other_closest = A;
+
+            return;
+        }
+        else if(A == B || A == C)
+        {
+            simplex = new List<Vector3>
+            {
+                B, C
+            };
+
+            CalculateClosestPointsLine(simplex, MDP, out my_closest, out other_closest);
+
+            return;
+        }
+        else if(B == C)
+        {
+            simplex = new List<Vector3>
+            {
+                A, B
+            };
+
+            CalculateClosestPointsLine(simplex, MDP, out my_closest, out other_closest);
+
+            return;
+        }
+
+        Vector3 ABC = Vector3.Cross(B - A, C - A);
+
+        float lambda1;
+        float lambda2;
+        float lambda3 = 1 - lambda1 - lambda2;
+
+        Vector3 my_A = MDP[A].MyPoint;
+        Vector3 other_A = MDP[A].OtherPoint;
+        Vector3 my_B = MDP[B].MyPoint;
+        Vector3 other_B = MDP[B].OtherPoint;
+        Vector3 my_C = MDP[C].MyPoint;
+        Vector3 other_C = MDP[C].OtherPoint;
+
+        my_closest = lambda1 * my_A + lambda2 * my_B + lambda3 * my_C;
+        other_closest = lambda1 * other_A + lambda2 * other_B + lambda3 * other_C;
+    }
+
     Vector3 MinkowskiDiffSupport(GJKCollider other, Vector3 direction, out Vector3 my_support, out Vector3 other_support)
     {
         my_support = support.Support(direction);
         other_support = other.support.Support(-direction);
         return my_support - other_support;
-    }
-
-    Vector3 MinkowskiDiffSupport(GJKCollider other, Vector3 direction, out Vector3 temp_closest)
-    {
-        temp_closest = support.Support(direction);
-        return temp_closest - other.support.Support(-direction);
     }
 
     Vector3 Cross_ABA(Vector3 A, Vector3 B)
@@ -633,10 +751,52 @@ public class GJKCollider : MonoBehaviour {
 
         //check which face region the origin is within
     }
-    */
 
     Vector3 MinkowskiDiffSupport(GJKCollider other, Vector3 direction)
     {
         return support.Support(direction) - other.support.Support(-direction);
+    }
+
+    Vector3 MinkowskiDiffSupport(GJKCollider other, Vector3 direction, out Vector3 temp_closest)
+    {
+        temp_closest = support.Support(direction);
+        return temp_closest - other.support.Support(-direction);
+    }
+    */
+
+    class MinkowskiDiffPair
+    {
+        private Vector3 my_point;
+        private Vector3 other_point;
+
+        public MinkowskiDiffPair(Vector3 my, Vector3 other)
+        {
+            my_point = my;
+            other_point = other;
+        }
+
+        public Vector3 MyPoint
+        {
+            get
+            {
+                return my_point;
+            }
+            set
+            {
+                my_point = value;
+            }
+        }
+
+        public Vector3 OtherPoint
+        {
+            get
+            {
+                return other_point;
+            }
+            set
+            {
+                other_point = value;
+            }
+        }
     }
 }
