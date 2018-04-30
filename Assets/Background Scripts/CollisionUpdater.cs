@@ -26,9 +26,9 @@ public class CollisionUpdater : MonoBehaviour {
         {
             for (int j = i + 1; j < colliders.Length; j++)
             {
-                Vector3 i_support;
-                Vector3 j_support;
-                bool collides = colliders[i].CollidesWithOther(colliders[j], out i_support, out j_support);
+                Vector3 i_closest;
+                Vector3 j_closest;
+                bool collides = colliders[i].CollidesWithOther(colliders[j], out i_closest, out j_closest);
 
                 if(collides)
                 {
@@ -36,7 +36,9 @@ public class CollisionUpdater : MonoBehaviour {
                     colliders[j].gameObject.GetComponent<Renderer>().material.color = colliding_color;
                 }
 
-                Debug.DrawLine(i_support, j_support);
+                print("closest points: " + i_closest + ", " + j_closest);
+
+                Debug.DrawLine(i_closest, j_closest);
             }
         }
     }
