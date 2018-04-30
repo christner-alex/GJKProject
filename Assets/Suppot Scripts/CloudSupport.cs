@@ -36,19 +36,5 @@ public class CloudSupport : MonoBehaviour, ISupport {
         }
 
         return best_verts[0];
-        /*
-        if(best_verts.Count == 1)
-        {
-            return best_verts[0];
-        }
-        else if(best_verts.Count == 2)
-        {
-
-        }
-        else if (best_verts.Count == 3)
-        {
-
-        }
-        */
     }
 }

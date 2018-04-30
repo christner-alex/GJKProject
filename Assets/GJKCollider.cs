@@ -40,7 +40,7 @@ public class GJKCollider : MonoBehaviour {
             return false;
         }
 
-        //sset next direction to check as perpendicular to that line
+        //set next direction to check as perpendicular to that line
         direction = Cross_ABA(C - B, -B);
         List<Vector3> simplex = new List<Vector3>
         {
