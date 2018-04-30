@@ -103,15 +103,34 @@ public class GJKCollider : MonoBehaviour {
         Vector3 AB = B - A;
         Vector3 AO = -A;
 
-        //smalles simplex containing the next most extreme point
-        //is the line AB
-        simplex = new List<Vector3>
+        if (Vector3.Dot(AB, AO) > 0)
         {
-            A, B
-        };
+            //origin in region between A and B
 
-        //the new direction is perpendicular to the line toward the origin
-        direction = Cross_ABA(AB, AO);
+            //smalles simplex containing the next most extreme point
+            //is the line AB
+            simplex = new List<Vector3>
+            {
+                A, B
+            };
+
+            //the new direction is perpendicular to the line toward the origin
+            direction = Cross_ABA(AB, AO);
+        }
+        else
+        {
+            //origin in region beyond A
+
+            //smalles simplex containing the next most extreme point
+            //is the point A
+            simplex = new List<Vector3>
+            {
+                A
+            };
+
+            //new direction is further in the direciton from A to origin
+            direction = AO;
+        }
 
         return false;
     }
