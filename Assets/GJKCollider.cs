@@ -110,25 +110,21 @@ public class GJKCollider : MonoBehaviour {
         
         Vector3 direction = Vector3.right;
         Vector3 C = MinkowskiDiffSupport(other, direction, out my_support, out other_support, MinkowskiDiffPairs);
-        /*
         if(Vector3.Dot(C, direction) < 0)
         {
             print("check 1");
             //return false;
             goto finish;
         }
-        */
 
         direction = -C;
         Vector3 B = MinkowskiDiffSupport(other, direction, out my_support, out other_support, MinkowskiDiffPairs);
-        /*
         if (Vector3.Dot(B, direction) < 0)
         {
             print("check 2");
             //return false;
             goto finish;
         }
-        */
 
         direction = Cross_ABA(C - B, -B);
         List<Vector3> simplex = new List<Vector3>
