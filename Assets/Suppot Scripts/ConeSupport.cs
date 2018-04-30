@@ -9,7 +9,7 @@ public class ConeSupport : MonoBehaviour, ISupport
 
     public Vector3 Support(Vector3 direction)
     {
-        Vector3 local_direction = transform.InverseTransformPoint(direction);
+        Vector3 local_direction = transform.InverseTransformDirection(direction);
 
         float x = local_direction.x;
         float y = local_direction.y;

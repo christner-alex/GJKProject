@@ -5,178 +5,76 @@ using UnityEngine;
 [RequireComponent(typeof(ISupport))]
 public class GJKCollider : MonoBehaviour {
 
-    //private bool colliding = false;
-
     private ISupport support;
 
-    private int MAX_ITERATIONS = 256;
-
-    //Dictionary<GJKCollider, Vector3> closest_points;
+    private int MAX_ITERATIONS = 32;
 
 	// Use this for initialization
 	void Start ()
     {
         support = GetComponent<ISupport>();
-
-        //closest_points = new Dictionary<GJKCollider, Vector3>();
     }
-	
-	// Update is called once per frame
-    /*
-	void Update ()
+
+    //returns true if this chape is colliding with other
+    public bool CollidesWithOther(GJKCollider other)
     {
-        GJKCollider[] colliders = FindObjectsOfType<GJKCollider>();
-
-        colliding = false;
-        foreach (GJKCollider c in colliders)
-        {
-            if(c == this)
-            {
-                continue;
-            }
-
-            if (!closest_points.ContainsKey(c))
-            {
-                closest_points.Add(c, c.gameObject.transform.position);
-            }
-
-            Vector3 my_support;
-            Vector3 other_support;
-            if (CollidesWithOther(c, out my_support, out other_support))
-            {
-                colliding = true;
-            }
-
-            closest_points[c] = my_support;
-        }
-	}
-    */
-
-    /*
-    public bool Colliding
-    {
-        get
-        {
-            return colliding;
-        }
-    }
-    */
-
-    /*
-    public Vector3 Support(Vector3 direction)
-    {
-        return support.Support(direction);
-    }
-    */
-
-    /*
-    public Vector3 ClosestPointTo(GJKCollider other)
-    {
-        if(!closest_points.ContainsKey(other))
-        {
-            print("this dictionay does not contain the key");
-            return this.gameObject.transform.position;
-        }
-
-        return closest_points[other];
-    }
-    */
-
-    public bool CollidesWithOther(GJKCollider other, out Vector3 my_closest, out Vector3 other_closest)
-    {
-        bool result = false;
         Vector3 newest_point;
-        Vector3 my_support;
-        Vector3 other_support;
-        Dictionary<Vector3, MinkowskiDiffPair> MinkowskiDiffPairs = new Dictionary<Vector3, MinkowskiDiffPair>();
-
-        /*
-        //start point in a arbitrary direction
-        newest_point = MinkowskiDiffSupport(other, Vector3.right, out my_support, out other_support);
-        if(!MinkowskiDiffPairs.ContainsKey(newest_point))
-        {
-            MinkowskiDiffPairs.Add(newest_point, new MinkowskiDiffPair(my_support, other_support));
-        }
-
-        //add that point to the simplex
-        List<Vector3> simplex = new List<Vector3>
-        {
-            newest_point
-        };
-
-        //search in the direction of that point to the origin
-        Vector3 direction = -newest_point;
-        */
         
+        //get point in arbitrary direction
         Vector3 direction = Vector3.right;
-        Vector3 C = MinkowskiDiffSupport(other, direction, out my_support, out other_support, MinkowskiDiffPairs);
+        Vector3 C = MinkowskiDiffSupport(other, direction);
+        //if that point is in the opposite direction from the origin,
+        //no collision
         if(Vector3.Dot(C, direction) < 0)
         {
-            print("check 1");
-            //return false;
-            goto finish;
+            return false;
         }
 
+        //get point in other direction
         direction = -C;
-        Vector3 B = MinkowskiDiffSupport(other, direction, out my_support, out other_support, MinkowskiDiffPairs);
+        Vector3 B = MinkowskiDiffSupport(other, direction);
+        //if that point is in the opposite direction from the origin,
+        //no collision
         if (Vector3.Dot(B, direction) < 0)
         {
-            print("check 2");
-            //return false;
-            goto finish;
+            return false;
         }
 
+        //sset next direction to check as perpendicular to that line
         direction = Cross_ABA(C - B, -B);
         List<Vector3> simplex = new List<Vector3>
         {
             B, C
         };
-
-        newest_point = Vector3.zero;
+        
         for (int i = 0; i < MAX_ITERATIONS; i++)
         {
-            newest_point = MinkowskiDiffSupport(other, direction, out my_support, out other_support, MinkowskiDiffPairs);
+            //get the support point in newest direction
+            newest_point = MinkowskiDiffSupport(other, direction);
 
+            //if that point is not closer to the origin,
+            //there is no collision
             if (Vector3.Dot(newest_point, direction) < 0)
             {
-                print("iteration " + i);
-                //return false;
-                break;
+                return false;
             }
 
+            //operate on the simplex,
+            //return true if the simplex is a tetrahedron
+            //that contains the origin
             if(DoSimplex(newest_point, ref simplex, ref direction))
             {
-                print("iteration " + i);
-                result = true;
-                //return true;
-                break;
+                return true;
             }
 
         }
 
-        //print("finished iters");
-        //return false;
-
-        finish:
-
-        //CalculateClosestPoints(simplex, MinkowskiDiffPairs, out my_closest, out other_closest);
-        my_closest = Vector3.zero;
-        other_closest = Vector3.zero;
-
-        /*
-        if(result)
-        {
-            print("distance = 0");
-        }
-        else
-        {
-            print("distance = " + newest_point.magnitude);
-        }
-        */
-
-        return result;
+        //don't iterate too much to avoid slowdown
+        return false;
     }
     
+    //return true if the simplex is a tetrahedron that contains the origin, false otherwise.
+    //also update direction and simplex to continue searching
     bool DoSimplex(Vector3 newest_point, ref List<Vector3> simplex, ref Vector3 direction)
     {
         if (simplex.Count == 1)//line
@@ -205,36 +103,14 @@ public class GJKCollider : MonoBehaviour {
         Vector3 AB = B - A;
         Vector3 AO = -A;
 
-        /*
-        if (Vector3.Dot(AB, AO) > 0)
-        {
-            //origin in region between A and B
-
-            simplex = new List<Vector3>
-            {
-                A, B
-            };
-            
-            direction = Cross_ABA(AB, AO);
-        }
-        else
-        {
-            //origin in region beyond A
-
-            simplex = new List<Vector3>
-            {
-                A
-            };
-
-            direction = AO;
-        }
-        */
-
+        //smalles simplex containing the next most extreme point
+        //is the line AB
         simplex = new List<Vector3>
         {
             A, B
         };
 
+        //the new direction is perpendicular to the line toward the origin
         direction = Cross_ABA(AB, AO);
 
         return false;
@@ -259,7 +135,8 @@ public class GJKCollider : MonoBehaviour {
         //if the origin lies outside the trianlge edge AB
         if(Vector3.Dot(ABP, AO) > 0)
         {
-            //the simplex is the line AB
+            //smalles simplex containing next most extreme point
+            //is the line AB
             simplex = new List<Vector3>
             {
                 A, B
@@ -276,7 +153,8 @@ public class GJKCollider : MonoBehaviour {
         //if the origin lies outside the trianlge edge AB
         if (Vector3.Dot(ACP, AO) > 0)
         {
-            //the simplex is the line AC
+            //smalles simplex containing next most extreme point
+            //is the line AC
             simplex = new List<Vector3>
             {
                 A, C
@@ -289,29 +167,34 @@ public class GJKCollider : MonoBehaviour {
         }
 
         //the point is within the trianlge either above or below
-
         if(Vector3.Dot(ABC, AO) > 0)
         {
+            //smallest simplex containing next most extreme point
+            //is the triangle ABC
             simplex = new List<Vector3>
             {
                 A, B, C
             };
 
+            //search above the triangle
             direction = ABC;
         }
         else
         {
+            //smallest simplex containing next most extreme point
+            //is the triangle ACB
             simplex = new List<Vector3>
             {
                 A, C, B
             };
 
+            //search below the triangle
             direction = -ABC;
         }
 
         return false;
     }
-
+    
     bool DoSimplexTetra(Vector3 A, ref List<Vector3> simplex, ref Vector3 direction)
     {
         Vector3 B = simplex[0];
@@ -319,517 +202,224 @@ public class GJKCollider : MonoBehaviour {
         Vector3 D = simplex[2];
 
         Vector3 AO = -A;
+        //Vector3 tmp;
 
         Vector3 AB = B - A;
         Vector3 AC = C - A;
         Vector3 AD = D - A;
 
+        //Vectors parallel to faces poining outward
         Vector3 ABC = Vector3.Cross(AB, AC);
         Vector3 ACD = Vector3.Cross(AC, AD);
         Vector3 ADB = Vector3.Cross(AD, AB);
 
-        Vector3 tmp;
+        bool over_ABC = Vector3.Dot(ABC, AO) > 0;
+        bool over_ACD = Vector3.Dot(ACD, AO) > 0;
+        bool over_ADB = Vector3.Dot(ADB, AO) > 0;
 
-        const int over_abc = 0x1;
-        const int over_acd = 0x2;
-        const int over_adb = 0x4;
+        Vector3 rotA = A;
+        Vector3 rotB = B;
+        Vector3 rotC = C;
+        Vector3 rotD = D;
+        Vector3 rotAB = AB;
+        Vector3 rotAC = AC;
+        Vector3 rotAD = AD;
+        Vector3 rotABC = ABC;
+        Vector3 rotACD = ACD;
 
-        int plane_tests =
-            (Vector3.Dot(ABC, AO) > 0 ? over_abc : 0) |
-            (Vector3.Dot(ACD, AO) > 0 ? over_acd : 0) |
-            (Vector3.Dot(ADB, AO) > 0 ? over_adb : 0);
-
-        switch(plane_tests)
+        //determine which faces to test
+        if(!over_ABC && !over_ACD && !over_ADB)
         {
-            case 0:
-                //beind all three faces, thus inside tetrahedron
-                return true;
-
-            case over_abc:
-                goto check_one_face;
-
-            case over_acd:
-                //rotate ACD into ABC
-                B = C;
-                C = D;
-
-                AB = AC;
-                AC = AD;
-
-                ABC = ACD;
-
-                goto check_one_face;
-
-            case over_adb:
-                //rotate ADB into ABC
-                C = B;
-                B = D;
-
-                AC = AB;
-                AB = AD;
-
-                ABC = ADB;
-
-                goto check_one_face;
-                
-            case over_abc | over_acd:
-                goto check_two_faces;
-
-            case over_acd | over_adb:
-                //rotate ACD, ADB into ABC, ACD
-                tmp = B;
-                B = C;
-                C = D;
-                D = tmp;
-
-                tmp = AB;
-                AB = AC;
-                AC = AD;
-                AD = tmp;
-
-                ABC = ACD;
-                ACD = ADB;
-
-                goto check_two_faces;
-
-            case over_adb | over_abc:
-                //rotate ADB, ABC into ABC, ACD
-                tmp = C;
-                C = B;
-                B = D;
-                D = tmp;
-
-                tmp = AC;
-                AC = AB;
-                AB = AD;
-                AD = tmp;
-
-                ACD = ABC;
-                ABC = ADB;
-
-                goto check_two_faces;
-
-            default:
-                return true;
+            //the origin is behind all 3 faces,
+            //so the origin is within the Minkowski Difference,
+            //so the spaces are overlapping
+            return true;
         }
+        else if(over_ABC && !over_ACD && !over_ADB)
+        {
+            //the origin is over ABC, but not ACD or ADB
 
+            rotA = A;
+            rotB = B;
+            rotC = C;
+
+            rotAB = AB;
+            rotAC = AC;
+
+            rotABC = ABC;
+
+            goto check_one_face;
+        }
+        else if (!over_ABC && over_ACD && !over_ADB)
+        {
+            //the origin is over ACD, but not ABC or ADB
+
+            rotA = A;
+            rotB = C;
+            rotC = D;
+
+            rotAB = AC;
+            rotAC = AD;
+
+            rotABC = ACD;
+
+            goto check_one_face;
+        }
+        else if (!over_ABC && !over_ACD && over_ADB)
+        {
+            //the origin is over ADB, but not ABC or ACD
+            
+            rotA = A;
+            rotB = D;
+            rotC = B;
+
+            rotAB = AD;
+            rotAC = AB;
+
+            rotABC = ADB;
+
+            goto check_one_face;
+        }
+        else if (over_ABC && over_ACD && !over_ADB)
+        {
+            //the origin is over ABC and ACD, but not ADB
+
+            rotA = A;
+            rotB = B;
+            rotC = C;
+            rotD = D;
+
+            rotAB = AB;
+            rotAC = AC;
+            rotAD = AD;
+
+            rotABC = ABC;
+            rotACD = ACD;
+
+            goto check_two_faces;
+        }
+        else if (!over_ABC && over_ACD && over_ADB)
+        {
+            //the origin is over ADB and ACD, but not ABC
+            
+            rotA = A;
+            rotB = C;
+            rotC = D;
+            rotD = B;
+
+            rotAB = AC;
+            rotAC = AD;
+            rotAD = AB;
+
+            rotABC = ACD;
+            rotACD = ADB;
+
+            goto check_two_faces;
+        }
+        else if (over_ABC && !over_ACD && over_ADB)
+        {
+            //the origin is over ABC and ADB, but not ACD
+            
+            rotA = A;
+            rotB = D;
+            rotC = B;
+            rotD = C;
+
+            rotAB = AD;
+            rotAC = AB;
+            rotAD = AC;
+
+            rotABC = ADB;
+            rotACD = ABC;
+
+            goto check_two_faces;
+        }
+        
         check_one_face:
 
-        if(Vector3.Dot( Vector3.Cross(ABC, AC), AO ) > 0)
+        if (Vector3.Dot(Vector3.Cross(rotABC, rotAC), AO) > 0)
         {
-            //in region of AC
+            //origin in in the region AC
+
+            //smallest simplex containing next extreme point is line AC
             simplex = new List<Vector3>
             {
-                A, C
+                rotA, rotC
             };
 
-            direction = Cross_ABA(AC, AO);
+            //search in direction perpendicular to AC toward the origin
+            direction = Cross_ABA(rotAC, AO);
 
             return false;
         }
 
         check_one_face_part_2:
 
-        if(Vector3.Dot( Vector3.Cross(AB, ABC), AO ) > 0)
+        if (Vector3.Dot(Vector3.Cross(rotAB, rotABC), AO) > 0)
         {
-            //in region of edge AB
+            //origin in in the region AC
+
+            //smallest simplex containing next extreme point is line AB
             simplex = new List<Vector3>
             {
-                A, B
+                rotA, rotB
             };
 
-            direction = Cross_ABA(AB, AO);
+            //search in direction perpendicular to AB toward the origin
+            direction = Cross_ABA(rotAB, AO);
 
             return false;
         }
 
-        //in region of ABC
+        //origin in in the region ABC
+
+        //smallest simplex containing next extreme point is triangle ABC
         simplex = new List<Vector3>
         {
-            A, B, C
+            rotA, rotB, rotC
         };
 
-        direction = ABC;
+        //search in perpendicular to that triangle
+        direction = rotABC;
 
         return false;
 
         check_two_faces:
 
-        if(Vector3.Dot( Vector3.Cross(ABC, AC), AO) > 0)
+        if (Vector3.Dot(Vector3.Cross(rotABC, rotAC), AO) > 0)
         {
             //origin is beyond AC,
             //So we consider ACD
-            B = C;
-            C = D;
+            rotB = rotC;
+            rotC = rotD;
 
-            AB = AC;
-            AC = AD;
+            rotAB = rotAC;
+            rotAC = rotAD;
 
-            ABC = ACD;
+            rotABC = rotACD;
 
             goto check_one_face;
         }
-        
+
         //either over ABC or AB
 
         goto check_one_face_part_2;
     }
 
-    void CalculateClosestPoints(List<Vector3> simplex, Dictionary<Vector3, MinkowskiDiffPair> MDP, out Vector3 my_closest, out Vector3 other_closest)
+    //returns a most most extreme on the Minkowski Difference along direction
+    //created by this shape and other
+    Vector3 MinkowskiDiffSupport(GJKCollider other, Vector3 direction)
     {
-        if (simplex.Count == 1)//point is closest
-        {
-            print("one simplex closest case");
-            my_closest = MDP[simplex[0]].MyPoint;
-            other_closest = MDP[simplex[0]].OtherPoint;
-        }
-        else if (simplex.Count == 2)//triangle
-        {
-            CalculateClosestPointsLine(simplex, MDP, out my_closest, out other_closest);
-        }
-        else if (simplex.Count == 3)//tetrahedron
-        {
-            CalculateClosestPointsTri(simplex, MDP, out my_closest, out other_closest);
-        }
-        else
-        {
-            print("closest point simplex error. Count=" + simplex.Count);
-
-            my_closest = Vector3.zero;
-            other_closest = Vector3.zero;
-        }
-    }
-    
-    void CalculateClosestPointsLine(List<Vector3> simplex, Dictionary<Vector3, MinkowskiDiffPair> MDP, out Vector3 my_closest, out Vector3 other_closest)
-    {
-        print("two simplex closest case");
-        Vector3 A = simplex[0];
-        Vector3 B = simplex[1];
-
-        if(A == B)
-        {
-            print("two simplex closest case: smae points");
-            my_closest = A;
-            other_closest = A;
-
-            return;
-        }
-
-        Vector3 L = B - A;
-
-        float lambda2 = Vector3.Dot(-L, A) / Vector3.Dot(L, L);
-        float lambda1 = 1 - lambda2;
-
-        Vector3 my_A = MDP[A].MyPoint;
-        Vector3 other_A = MDP[A].OtherPoint;
-        Vector3 my_B = MDP[B].MyPoint;
-        Vector3 other_B = MDP[B].OtherPoint;
-
-        my_closest = lambda1 * my_A + lambda2 * my_B;
-        other_closest = lambda1 * other_A + lambda2 * other_B;
-    }
-
-    void CalculateClosestPointsTri(List<Vector3> simplex, Dictionary<Vector3, MinkowskiDiffPair> MDP, out Vector3 my_closest, out Vector3 other_closest)
-    {
-        print("unimplemented triangle simplex case");
-        my_closest = MDP[simplex[0]].MyPoint;
-        other_closest = MDP[simplex[0]].OtherPoint;
-
-        return;
-        Vector3 A = simplex[0];
-        Vector3 B = simplex[1];
-        Vector3 C = simplex[2];
-
-        if(A == B && B == C)
-        {
-            my_closest = A;
-            other_closest = A;
-
-            return;
-        }
-        else if(A == B || A == C)
-        {
-            simplex = new List<Vector3>
-            {
-                B, C
-            };
-
-            CalculateClosestPointsLine(simplex, MDP, out my_closest, out other_closest);
-
-            return;
-        }
-        else if(B == C)
-        {
-            simplex = new List<Vector3>
-            {
-                A, B
-            };
-
-            CalculateClosestPointsLine(simplex, MDP, out my_closest, out other_closest);
-
-            return;
-        }
-
-        Vector3 ABC = Vector3.Cross(B - A, C - A);
-
-        float lambda1;
-        float lambda2;
-        float lambda3 = 1 - lambda1 - lambda2;
-
-        Vector3 my_A = MDP[A].MyPoint;
-        Vector3 other_A = MDP[A].OtherPoint;
-        Vector3 my_B = MDP[B].MyPoint;
-        Vector3 other_B = MDP[B].OtherPoint;
-        Vector3 my_C = MDP[C].MyPoint;
-        Vector3 other_C = MDP[C].OtherPoint;
-
-        my_closest = lambda1 * my_A + lambda2 * my_B + lambda3 * my_C;
-        other_closest = lambda1 * other_A + lambda2 * other_B + lambda3 * other_C;
-    }
-
-    Vector3 MinkowskiDiffSupport(GJKCollider other, Vector3 direction, out Vector3 my_support, out Vector3 other_support, Dictionary<Vector3, MinkowskiDiffPair> record)
-    {
-        my_support = support.Support(direction);
-        other_support = other.support.Support(-direction);
+        Vector3 my_support = support.Support(direction);
+        Vector3 other_support = other.support.Support(-direction);
         Vector3 result = my_support - other_support;
-
-        if (!record.ContainsKey(result))
-        {
-            record.Add(result, new MinkowskiDiffPair(my_support, other_support));
-        }
 
         return result;
     }
 
+    //returns A x B x A
     Vector3 Cross_ABA(Vector3 A, Vector3 B)
     {
         return Vector3.Cross( Vector3.Cross(A, B), A );
-    }
-
-    /*
-    bool CollidesWithOther(GJKCollider other, out Vector3 closest_point, bool temp)
-    {
-        Vector3 min_norm = Vector3.zero;
-        bool result = false;
-
-        List<Vector3> convex_hull = new List<Vector3>();
-
-        for (int i = 0; i < MAX_ITERATIONS; i++)
-        {
-            min_norm = MinNorm(ref convex_hull);
-
-            if(min_norm == Vector3.zero)
-            {
-                result = true;
-                break;
-            }
-
-            Vector3 support_point = MinkowskiDiffSupport(other, -min_norm);
-
-            //if the min norm is just as extreme as the support point
-            //(ie, the vector from norm to support is perpendicular to the direction searched)
-            //then there was no collision
-            if (Vector3.Dot(support_point - min_norm, -min_norm) == 0)
-            {
-                break;
-            }
-
-            convex_hull.Add(support_point);
-        }
-        
-        closest_point = min_norm;
-        return result;
-    }
-    */
-
-    /*
-    //returns the closest point within the convex hull defined by convex_hull
-    //and updates convex_hull to the smallest hull containing that point
-    Vector3 MinNorm(ref List<Vector3> convex_hull)
-    {
-        if(convex_hull.Count == 1)
-        {
-            return convex_hull[0];
-        }
-        else if(convex_hull.Count == 2)
-        {
-            return MinNormLine(ref convex_hull);
-        }
-        else if (convex_hull.Count == 3)
-        {
-            return MinNormTri(ref convex_hull);
-        }
-        else if (convex_hull.Count == 4)
-        {
-            return MinNormTetra(ref convex_hull);
-        }
-        else
-        {
-
-        }
-    }
-
-    Vector3 MinNormLine(ref List<Vector3> convex_hull)
-    {
-        Vector3 A = convex_hull[0];
-        Vector3 B = convex_hull[1];
-
-        Vector3 AB = B - A;
-        Vector3 BA = A - B;
-
-        Vector3 AO = -A;
-        Vector3 BO = -B;
-
-        //in inner region
-        if(Vector3.Dot(AO, AB) > 0 && Vector3.Dot(BO, BA) > 0)
-        {
-            return Vector3.Project(AO, AB);
-        }
-
-        if(AO.magnitude < BO.magnitude)//A is closer
-        {
-            convex_hull = new List<Vector3>
-            {
-                A
-            };
-
-            return A;
-        }
-        else //B is closer
-        {
-            convex_hull = new List<Vector3>
-            {
-                B
-            };
-
-            return B;
-        }
-    }
-
-    Vector3 MinNormTri(ref List<Vector3> convex_hull)
-    {
-        Vector3 A = convex_hull[0];
-        Vector3 B = convex_hull[1];
-        Vector3 C = convex_hull[2];
-
-        Vector3 AO = -A;
-        Vector3 BO = -B;
-        Vector3 CO = -C;
-
-        Vector3 AB = B - A;
-        Vector3 BC = C - B;
-        Vector3 CA = A - C;
-
-        Vector3 ABC = Vector3.Cross(AB, -CA);
-
-        //vector3 perpendicular to each edge pointing outward
-        Vector3 ABP = Vector3.Cross(AB, ABC);
-        Vector3 BCP = Vector3.Cross(BC, ABC);
-        Vector3 CAP = Vector3.Cross(CA, ABC);
-
-        //inner region of triangle
-        if (Vector3.Dot(ABP, CO) < 0 && Vector3.Dot(BCP, AO) < 0 && Vector3.Dot(CAP, BO) < 0)
-        {
-            Vector3 p1 = Vector3.Project(AO, AB);
-            Vector3 p2 = Vector3.Project(BO, BC);
-        }
-        
-        //check each line
-        if (AO.magnitude < CO.magnitude && BO.magnitude < CO.magnitude)
-        {
-            convex_hull = new List<Vector3>
-            {
-                A, B
-            };
-        }
-
-        if (AO.magnitude < BO.magnitude && CO.magnitude < BO.magnitude)
-        {
-            convex_hull = new List<Vector3>
-            {
-                A, C
-            };
-        }
-
-        if (BO.magnitude < AO.magnitude && CO.magnitude < BO.magnitude)
-        {
-            convex_hull = new List<Vector3>
-            {
-                B, C
-            };
-        }
-
-        return MinNormLine(ref convex_hull);
-    }
-
-    Vector3 MinNormTetra(ref List<Vector3> convex_hull)
-    {
-        Vector3 A = convex_hull[0];
-        Vector3 B = convex_hull[1];
-        Vector3 C = convex_hull[2];
-        Vector3 D = convex_hull[3];
-
-        Vector3 AO = -A;
-        Vector3 BO = -B;
-        Vector3 CO = -C;
-        Vector3 DO = -D;
-
-        //check if the origin is inside the tetrahedron
-        if(false)
-        {
-
-
-            return Vector3.zero;
-        }
-
-        //check which face region the origin is within
-    }
-
-    Vector3 MinkowskiDiffSupport(GJKCollider other, Vector3 direction)
-    {
-        return support.Support(direction) - other.support.Support(-direction);
-    }
-
-    Vector3 MinkowskiDiffSupport(GJKCollider other, Vector3 direction, out Vector3 temp_closest)
-    {
-        temp_closest = support.Support(direction);
-        return temp_closest - other.support.Support(-direction);
-    }
-    */
-
-    class MinkowskiDiffPair
-    {
-        private Vector3 my_point;
-        private Vector3 other_point;
-
-        public MinkowskiDiffPair(Vector3 my, Vector3 other)
-        {
-            my_point = my;
-            other_point = other;
-        }
-
-        public Vector3 MyPoint
-        {
-            get
-            {
-                return my_point;
-            }
-            set
-            {
-                my_point = value;
-            }
-        }
-
-        public Vector3 OtherPoint
-        {
-            get
-            {
-                return other_point;
-            }
-            set
-            {
-                other_point = value;
-            }
-        }
     }
 }
