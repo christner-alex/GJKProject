@@ -136,7 +136,28 @@ public class GJKCollider : MonoBehaviour {
             B, C
         };
 
-        newest_point = Vector3.zero;
+        /*
+        Vector3 A = MinkowskiDiffSupport(other, direction, out my_support, out other_support, MinkowskiDiffPairs);
+        if (Vector3.Dot(Vector3.Cross(B-A,C-A), -A) > 0)
+        {
+            simplex = new List<Vector3>
+            {
+                A, B, C
+            };
+
+            direction = Vector3.Cross(B - A, C - A);
+        }
+        else
+        {
+            simplex = new List<Vector3>
+            {
+                A, C, B
+            };
+
+            direction = -Vector3.Cross(B - A, C - A);
+        }
+        */
+
         for (int i = 0; i < MAX_ITERATIONS; i++)
         {
             newest_point = MinkowskiDiffSupport(other, direction, out my_support, out other_support, MinkowskiDiffPairs);
